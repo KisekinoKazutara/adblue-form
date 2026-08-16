@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>アドブルー入出庫記録｜西部開発農産</title>
+<style>
+  :root{
+    --bg: #EFEAE0;
+    --card: #FFFFFE;
+    --ink: #263228;
+    --ink-soft: #5B6459;
+    --moss: #445E3C;
+    --moss-dark: #324530;
+    --wheat: #C89B3C;
+    --wheat-soft: #F1E4C3;
+    --rust: #9C4A2C;
+    --rust-soft: #F3DED4;
+    --line: #DCD5C6;
+    --radius: 14px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Sans","Yu Gothic",-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body{
+    min-height: 100vh;
+    display:flex;
+    justify-content:center;
+    padding: 28px 16px 60px;
+  }
+  .app{
+    width: 100%;
+    max-width: 460px;
+  }
+  header{
+    text-align:center;
+    margin-bottom: 22px;
+  }
+  header .eyebrow{
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  header h1{
+    font-size: 21px;
+    margin: 6px 0 2px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  header p{
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .tank{
+    width: 46px; height: 46px;
+    margin: 0 auto 10px;
+    position: relative;
+  }
+  .tank svg{ width:100%; height:100%; }
+
+  .card{
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 20px;
+    box-shadow: 0 1px 2px rgba(38,50,40,0.04);
+  }
+
+  .step-label{
+    display:flex; align-items:center; gap:8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--moss);
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+  .step-label .num{
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--moss);
+    color: #fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 11px;
+  }
+
+  .field{ margin-bottom: 22px; }
+  .field:last-child{ margin-bottom: 0; }
+
+  select, input[type="text"]{
+    width: 100%;
+    padding: 14px 14px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select:focus, input[type="text"]:focus, button:focus-visible{
+    outline: 2px solid var(--moss);
+    outline-offset: 1px;
+  }
+
+  .select-wrap{ position:relative; }
+  .select-wrap::after{
+    content:"▾";
+    position:absolute; right:14px; top:50%;
+    transform: translateY(-50%);
+    color: var(--ink-soft);
+    pointer-events:none;
+    font-size: 13px;
+  }
+
+  .toggle{
+    display:flex;
+    gap: 10px;
+  }
+  .toggle button{
+    flex:1;
+    padding: 16px 8px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    background: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    transition: border-color .15s ease, background .15s ease, color .15s ease;
+  }
+  .toggle button svg{ width:22px; height:22px; }
+  .toggle button.active.in{
+    background: var(--wheat-soft);
+    border-color: var(--wheat);
+    color: #8a6410;
+  }
+  .toggle button.active.out{
+    background: #E7EFE3;
+    border-color: var(--moss);
+    color: var(--moss-dark);
+  }
+
+  .unit-row{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+  }
+  .unit-row input{ flex:1; text-align:right; font-variant-numeric: tabular-nums; }
+  .unit-row .unit{
+    font-size: 14px;
+    color: var(--ink-soft);
+    font-weight: 600;
+    width: 20px;
+  }
+  .hint{
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    min-height: 16px;
+  }
+  .hint.error{ color: var(--rust); font-weight:600; }
+
+  .primary-btn{
+    width:100%;
+    padding: 16px;
+    margin-top: 26px;
+    border: none;
+    border-radius: 10px;
+    background: var(--moss);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background .15s ease, transform .05s ease;
+  }
+  .primary-btn:active{ transform: scale(0.99); }
+  .primary-btn:disabled{
+    background: #B9C2B4;
+    cursor: not-allowed;
+  }
+  .ghost-btn{
+    width:100%;
+    padding: 14px;
+    margin-top: 10px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* confirm screen */
+  .summary{
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .summary-row{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 15px;
+  }
+  .summary-row:last-child{ border-bottom:none; }
+  .summary-row .k{ color: var(--ink-soft); font-size: 13px; }
+  .summary-row .v{ font-weight: 700; }
+  .summary-row .v.qty{ font-variant-numeric: tabular-nums; }
+
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .badge.in{ background: var(--wheat-soft); color:#8a6410; }
+  .badge.out{ background: #E7EFE3; color: var(--moss-dark); }
+
+  /* status screens */
+  .status{
+    text-align:center;
+    padding: 10px 4px 4px;
+  }
+  .status .icon{
+    width: 56px; height:56px;
+    margin: 0 auto 16px;
+  }
+  .status h2{
+    font-size: 18px;
+    margin: 0 0 6px;
+  }
+  .status p{
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin: 0;
+    line-height:1.6;
+  }
+
+  .spinner{
+    width: 34px; height:34px;
+    border-radius: 50%;
+    border: 3px solid var(--line);
+    border-top-color: var(--moss);
+    margin: 4px auto 18px;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .footer-note{
+    text-align:center;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    margin-top: 18px;
+    line-height:1.6;
+  }
+
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  @media (prefers-reduced-motion: reduce){
+    .spinner{ animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="tank" aria-hidden="true">
+      <svg viewBox="0 0 48 48" fill="none">
+        <rect x="10" y="6" width="28" height="36" rx="6" stroke="#445E3C" stroke-width="2.5"/>
+        <path d="M14 24C14 24 18 20 24 24C30 28 34 24 34 24V38C34 39.6569 32.6569 41 31 41H17C15.3431 41 14 39.6569 14 38V24Z" fill="#C89B3C" fill-opacity="0.55"/>
+        <line x1="10" y1="14" x2="38" y2="14" stroke="#445E3C" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="eyebrow">西部開発農産 生産管理</div>
+    <h1>アドブルー入出庫記録</h1>
+    <p>入力 → 内容確認 → 送信の3ステップです</p>
+  </header>
+
+  <!-- STEP 1: 入力 -->
+  <div class="screen active" id="screen-input">
+    <div class="card">
+      <div class="step-label"><span class="num">1</span>作業者名</div>
+      <div class="field">
+        <div class="select-wrap">
+          <select id="worker-select">
+            <option value="" disabled selected>選択してください</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="step-label"><span class="num">2</span>区分</div>
+      <div class="field">
+        <div class="toggle" role="group" aria-label="区分を選択">
+          <button type="button" id="btn-in" class="in" data-type="入庫">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 4V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            入庫
+          </button>
+          <button type="button" id="btn-out" class="out" data-type="出庫">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 20V8M12 8L7 13M12 8L17 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 4H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            出庫
+          </button>
+        </div>
+      </div>
+
+      <div class="step-label"><span class="num">3</span>リットル数</div>
+      <div class="field">
+        <div class="unit-row">
+          <input type="text" inputmode="decimal" id="qty-input" placeholder="例：12.5">
+          <span class="unit">L</span>
+        </div>
+        <div class="hint" id="qty-hint">半角数字・小数点第1位まで入力してください</div>
+      </div>
+
+      <button class="primary-btn" id="btn-to-confirm" disabled>内容確認へ進む</button>
+    </div>
+    <p class="footer-note">送信前に内容を確認する画面が表示されます</p>
+  </div>
+
+  <!-- STEP 2: 確認 -->
+  <div class="screen" id="screen-confirm">
+    <div class="card">
+      <div class="step-label"><span class="num">✓</span>この内容で送信します</div>
+      <div class="summary">
+        <div class="summary-row">
+          <span class="k">作業者名</span>
+          <span class="v" id="confirm-worker">—</span>
+        </div>
+        <div class="summary-row">
+          <span class="k">区分</span>
+          <span class="v" id="confirm-type">—</span>
+        </div>
+        <div class="summary-row">
+          <span class="k">リットル数</span>
+          <span class="v qty" id="confirm-qty">— L</span>
+        </div>
+      </div>
+      <button class="primary-btn" id="btn-submit">送信する</button>
+      <button class="ghost-btn" id="btn-back">訂正する</button>
+    </div>
+  </div>
+
+  <!-- STEP 3a: 送信中 -->
+  <div class="screen" id="screen-sending">
+    <div class="card status">
+      <div class="spinner" aria-hidden="true"></div>
+      <h2>送信しています…</h2>
+      <p>そのまま画面を閉じずにお待ちください</p>
+    </div>
+  </div>
+
+  <!-- STEP 3b: 完了 -->
+  <div class="screen" id="screen-done">
+    <div class="card status">
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="27" stroke="#445E3C" stroke-width="2"/>
+          <path d="M17 29L24 36L39 20" stroke="#445E3C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2>記録しました</h2>
+      <p>入出庫内容を記録しました。<br>登録内容は確認メールでも届きます。</p>
+      <button class="primary-btn" id="btn-new">続けて入力する</button>
+    </div>
+  </div>
+
+  <!-- STEP 3c: エラー -->
+  <div class="screen" id="screen-error">
+    <div class="card status">
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="27" stroke="#9C4A2C" stroke-width="2"/>
+          <path d="M28 16V32" stroke="#9C4A2C" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="28" cy="40" r="2.2" fill="#9C4A2C"/>
+        </svg>
+      </div>
+      <h2>送信できませんでした</h2>
+      <p id="error-detail">通信状態をご確認のうえ、もう一度お試しください。</p>
+      <button class="primary-btn" id="btn-retry">もう一度送信する</button>
+      <button class="ghost-btn" id="btn-error-back">内容を直す</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   設定エリア（管理者が編集する箇所）
+   ============================================================ */
+const CONFIG = {
+  // Power Automate「HTTP要求の受信時」トリガーのURLをここに貼り付けてください
+  SUBMIT_URL: "https://default09f1115921904472898a19ae793778.c2.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/31/workflows/26267b01f1444afcba3ab65db129b22b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2CzVc7wTfrImtRRKdUhdeZOJBtsBCBRHo2XPXTBNk4Y",
+
+  // 作業者名の一覧（アプリ用_従業員マスターの更新に合わせて、このリストも編集してください）
+  WORKERS: [
+    "伊藤一男",
+    "遠藤峻介",
+    "遠藤建城",
+    "及川奏子",
+    "及川野杏",
+    "及川秀徳",
+    "大槻圭徹",
+    "大森雅文",
+    "小原恵利",
+    "小原宗一郎",
+    "小原信正",
+    "小原泰典",
+    "小原裕",
+    "小原凜花",
+    "折居健一",
+    "柏葉尊法",
+    "片方慎也",
+    "片山勇太",
+    "加藤千尋",
+    "鎌田光",
+    "菅野一成",
+    "菅野浩之",
+    "菊池栄輝",
+    "菊池恭平",
+    "菊池透",
+    "菊池望夢",
+    "菊地裕",
+    "日下マリア",
+    "楠凌太朗",
+    "熊谷保",
+    "小松かな子",
+    "昆野周二",
+    "齊藤里美",
+    "佐々木章",
+    "佐々木恵美",
+    "佐々木唯佳",
+    "佐藤勝弥",
+    "佐藤初則",
+    "佐藤佑",
+    "猪内優花子",
+    "清水一孝",
+    "神志保",
+    "菅原敏一",
+    "高橋貴士",
+    "高橋賢",
+    "高橋登",
+    "高橋浩幸",
+    "高橋郁也",
+    "高橋由美子",
+    "髙橋陽子",
+    "照井利康",
+    "照井勝也",
+    "照井渉",
+    "笘米地信広",
+    "中田美智也",
+    "成田文歌",
+    "根子雅人",
+    "畑山哲穂",
+    "ファムタイトゥエン",
+    "ファンフウクエット",
+    "藤枝弘之",
+    "藤本優多",
+    "藤原歩",
+    "藤原尚輝",
+    "堀口詩恩",
+    "三浦春美",
+    "谷地諒一",
+    "矢吹大二",
+    "山㟢理沙",
+    "吉田佳子",
+    "吉野修治",
+    "渡邊翔平",
+    "トランプ",
+    "プーチン"
+  ]
+};
+/* ============================================================ */
+
+const state = {
+  worker: null,
+  type: null,
+  qty: null
+};
+
+const screens = {
+  input: document.getElementById("screen-input"),
+  confirm: document.getElementById("screen-confirm"),
+  sending: document.getElementById("screen-sending"),
+  done: document.getElementById("screen-done"),
+  error: document.getElementById("screen-error"),
+};
+function showScreen(name){
+  Object.values(screens).forEach(s => s.classList.remove("active"));
+  screens[name].classList.add("active");
+  window.scrollTo({top:0, behavior:"instant"});
+}
+
+// 作業者プルダウンの構築（固定リスト方式）
+const workerSelect = document.getElementById("worker-select");
+CONFIG.WORKERS.forEach(name => {
+  const opt = document.createElement("option");
+  opt.value = name;
+  opt.textContent = name;
+  workerSelect.appendChild(opt);
+});
+
+const btnIn = document.getElementById("btn-in");
+const btnOut = document.getElementById("btn-out");
+const qtyInput = document.getElementById("qty-input");
+const qtyHint = document.getElementById("qty-hint");
+const btnToConfirm = document.getElementById("btn-to-confirm");
+
+function validateQty(value){
+  return /^\d+(\.\d)?$/.test(value.trim());
+}
+
+function refreshSubmitEnabled(){
+  const qtyOk = validateQty(qtyInput.value);
+  btnToConfirm.disabled = !(state.worker && state.type && qtyOk);
+}
+
+workerSelect.addEventListener("change", () => {
+  state.worker = workerSelect.value;
+  refreshSubmitEnabled();
+});
+
+btnIn.addEventListener("click", () => {
+  state.type = "入庫";
+  btnIn.classList.add("active");
+  btnOut.classList.remove("active");
+  refreshSubmitEnabled();
+});
+btnOut.addEventListener("click", () => {
+  state.type = "出庫";
+  btnOut.classList.add("active");
+  btnIn.classList.remove("active");
+  refreshSubmitEnabled();
+});
+
+qtyInput.addEventListener("input", () => {
+  if(qtyInput.value === "" || validateQty(qtyInput.value)){
+    qtyHint.textContent = "半角数字・小数点第1位まで入力してください";
+    qtyHint.classList.remove("error");
+  } else {
+    qtyHint.textContent = "半角数字で、小数点は第1位までにしてください（例：12.5）";
+    qtyHint.classList.add("error");
+  }
+  refreshSubmitEnabled();
+});
+
+document.getElementById("btn-to-confirm").addEventListener("click", () => {
+  state.qty = qtyInput.value.trim();
+  document.getElementById("confirm-worker").textContent = state.worker;
+  const typeEl = document.getElementById("confirm-type");
+  typeEl.innerHTML = `<span class="badge ${state.type === "入庫" ? "in" : "out"}">${state.type}</span>`;
+  document.getElementById("confirm-qty").textContent = `${state.qty} L`;
+  showScreen("confirm");
+});
+
+document.getElementById("btn-back").addEventListener("click", () => showScreen("input"));
+document.getElementById("btn-error-back").addEventListener("click", () => showScreen("confirm"));
+
+async function submitRecord(){
+  showScreen("sending");
+  try{
+    const res = await fetch(CONFIG.SUBMIT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        "作業者名": state.worker,
+        "区分": state.type,
+        "リットル数": state.qty
+      })
+    });
+    if(!res.ok){
+      throw new Error("status " + res.status);
+    }
+    showScreen("done");
+  } catch(err){
+    document.getElementById("error-detail").textContent =
+      "通信状態をご確認のうえ、もう一度お試しください。（詳細：" + err.message + "）";
+    showScreen("error");
+  }
+}
+
+document.getElementById("btn-submit").addEventListener("click", submitRecord);
+document.getElementById("btn-retry").addEventListener("click", submitRecord);
+
+document.getElementById("btn-new").addEventListener("click", () => {
+  state.worker = null; state.type = null; state.qty = null;
+  workerSelect.selectedIndex = 0;
+  btnIn.classList.remove("active");
+  btnOut.classList.remove("active");
+  qtyInput.value = "";
+  qtyHint.textContent = "半角数字・小数点第1位まで入力してください";
+  qtyHint.classList.remove("error");
+  refreshSubmitEnabled();
+  showScreen("input");
+});
+</script>
+</body>
+</html>
